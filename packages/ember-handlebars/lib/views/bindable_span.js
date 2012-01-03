@@ -80,6 +80,29 @@ Ember._BindableSpanView = Ember.View.extend(Ember.Metamorph,
   */
   property: null,
 
+  checkRerender: function() {
+    if (get(this, 'isDestroyed')) { return; }
+
+    var valueTransform = get(this, 'valueTransformFunc'),
+        property = get(this, 'property'),
+        context = get(this, 'previousContext');
+
+    // Use the current context as the result if no
+    // property is provided.
+    if (property === '') {
+      result = context;
+    } else {
+      result = getPath(context, property);
+    }
+
+    transformedValue = valueTransform ? valueTransform(result) : result;
+
+    if (this._lastResult !== transformedValue) {
+      this.rerender();
+      this._lastResult = transformedValue;
+    }
+  },
+
   /**
     Determines which template to invoke, sets up the correct state based on
     that logic, then invokes the default Ember.View `render` implementation.
@@ -102,6 +125,7 @@ Ember._BindableSpanView = Ember.View.extend(Ember.Metamorph,
     var escape = get(this, 'isEscaped');
 
     var shouldDisplay = get(this, 'shouldDisplayFunc'),
+        valueTransform = get(this, 'valueTransformFunc'),
         property = get(this, 'property'),
         preserveContext = get(this, 'preserveContext'),
         context = get(this, 'previousContext');
@@ -119,6 +143,8 @@ Ember._BindableSpanView = Ember.View.extend(Ember.Metamorph,
     } else {
       result = getPath(context, property);
     }
+
+    this._lastResult = valueTransform ? valueTransform(result) : result;
 
     // First, test the conditional to see if we should
     // render the template or not.

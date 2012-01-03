@@ -14,7 +14,7 @@ var get = Ember.get, getPath = Ember.getPath, set = Ember.set, fmt = Ember.Strin
 (function() {
   // Binds a property into the DOM. This will create a hook in DOM that the
   // KVO system will look for and upate if the property changes.
-  var bind = function(property, options, preserveContext, shouldDisplay) {
+  var bind = function(property, options, preserveContext, shouldDisplay, valueTransform) {
     var data = options.data,
         fn = options.fn,
         inverse = options.inverse,
@@ -29,6 +29,7 @@ var get = Ember.get, getPath = Ember.getPath, set = Ember.set, fmt = Ember.Strin
       var bindView = view.createChildView(Ember._BindableSpanView, {
         preserveContext: preserveContext,
         shouldDisplayFunc: shouldDisplay,
+        valueTransformFunc: valueTransform,
         displayTemplate: fn,
         inverseTemplate: inverse,
         property: property,
@@ -42,8 +43,7 @@ var get = Ember.get, getPath = Ember.getPath, set = Ember.set, fmt = Ember.Strin
 
       /** @private */
       observer = function(){
-        // Double check since sometimes the view gets destroyed after this observer is already queued
-        if (!get(bindView, 'isDestroyed')) { bindView.rerender(); }
+        bindView.checkRerender();
       };
 
       /** @private */
@@ -110,15 +110,16 @@ var get = Ember.get, getPath = Ember.getPath, set = Ember.set, fmt = Ember.Strin
     @returns {String} HTML string
   */
   Ember.Handlebars.registerHelper('boundIf', function(property, fn) {
-    var context = (fn.contexts && fn.contexts[0]) || this;
+    var context = (fn.contexts && fn.contexts[0]) || this,
+        func = function(result) {
+          if (Ember.typeOf(result) === 'array') {
+            return get(result, 'length') !== 0;
+          } else {
+            return !!result;
+          }
+        };
 
-    return bind.call(context, property, fn, true, function(result) {
-      if (Ember.typeOf(result) === 'array') {
-        return get(result, 'length') !== 0;
-      } else {
-        return !!result;
-      }
-    } );
+    return bind.call(context, property, fn, true, func, func);
   });
 })();
 
