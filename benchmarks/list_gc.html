@@ -1,0 +1,68 @@
+<!doctype html>
+
+<html>
+  <head>
+    <script src="../lib/jquery-1.7.2.js"></script>
+    <script src="../lib/handlebars-1.0.rc.1.js"></script>
+    <script src="../dist/ember.prod.js"></script>
+  </head>
+  <body>
+    <script type="text/x-handlebars">
+      <div>
+        <a href="#" {{action toggleRendering target="App"}}>Toggle List</a>
+      </div>
+      {{#if App.showRendered}}
+      <ul>{{#each App.listItems}}
+        <li>
+          <ol>{{#each sublistItems}}
+            <li>{{#view App.SubListItemView}}
+              {{view App.SubListItemTitle}}
+              {{view App.SubListItemBody}}
+            {{/view}}</li>
+          {{/each}}</ol>
+      {{/each}}</ul>
+      {{else}}
+        Click link to render!
+      {{/if}}
+    </script>
+    <script type="text/x-handlebars" data-template-name="title">
+      <label>Title:</label> <span>{{title}}</span>
+    </script>
+    <script type="text/x-handlebars" data-template-name="body">
+      <label>Body:</label> <span>{{body}}</span>
+    </script>
+
+    <script>
+      Ember.run(function() {
+        App = Ember.Application.create();
+        App.showRendered = false;
+        App.toggleRendering = function(){
+          App.toggleProperty('showRendered');
+        };
+        App.listItems = [];
+        for (var i = 0; i < 100; i++) {
+          subItems = []
+          for (var j = 0; j < 10; j++) {
+            subItems.push(Em.Object.create({
+              title: "Title " + i.toString() + ":" + j.toString(),
+              body: "This is some nice body text for item " + i.toString() + " and subitem " + j.toString()
+            }));
+          }
+          App.listItems.push(Em.Object.create({
+            sublistItems: subItems
+          }));
+          App.SubListItemView = Em.View.extend({
+            classNames: 'sub-list-item-view'
+          });
+          App.SubListItemTitle = Em.View.extend({
+            templateName: 'title'
+          });
+          App.SubListItemBody = Em.View.extend({
+            templateName: 'body'
+          });
+        }
+      });
+    </script>
+  </body>
+</html>
+

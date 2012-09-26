@@ -9,7 +9,9 @@ require('ember-metal/array');
 */
 
 var AFTER_OBSERVERS = ':change';
+var afterCache = {};
 var BEFORE_OBSERVERS = ':before';
+var beforeCache = {};
 var guidFor = Ember.guidFor;
 
 var deferred = 0;
@@ -143,11 +145,17 @@ Ember.setProperties = function(self, hash) {
 
 
 function changeEvent(keyName) {
-  return keyName+AFTER_OBSERVERS;
+  if (afterCache.hasOwnProperty(keyName)) {
+    return afterCache[keyName];
+  }
+  return afterCache[keyName] = keyName+AFTER_OBSERVERS;
 }
 
 function beforeEvent(keyName) {
-  return keyName+BEFORE_OBSERVERS;
+  if (beforeCache.hasOwnProperty(keyName)) {
+    return beforeCache[keyName];
+  }
+  return beforeCache[keyName] = keyName+BEFORE_OBSERVERS;
 }
 
 /**

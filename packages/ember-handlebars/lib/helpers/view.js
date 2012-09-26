@@ -12,6 +12,8 @@ var get = Ember.get, set = Ember.set;
 var PARENT_VIEW_PATH = /^parentView\./;
 var EmberHandlebars = Ember.Handlebars;
 var VIEW_PRESERVES_CONTEXT = Ember.VIEW_PRESERVES_CONTEXT;
+var BINDING_CONTEXT = 'bindingContext';
+var bindingContextPaths = {};
 
 EmberHandlebars.ViewHelper = Ember.Object.create({
 
@@ -109,9 +111,12 @@ EmberHandlebars.ViewHelper = Ember.Object.create({
     } else if (Ember.isGlobalPath(path)) {
       return null;
     } else if (path === 'this') {
-      return 'bindingContext';
+      return BINDING_CONTEXT;
     } else {
-      return 'bindingContext.' + path;
+      if (bindingContextPaths.hasOwnProperty(path)) {
+        return bindingContextPaths[path];
+      }
+      return bindingContextPaths[path] = BINDING_CONTEXT + '.' + path;
     }
   },
 
@@ -170,7 +175,7 @@ EmberHandlebars.ViewHelper = Ember.Object.create({
 
   ``` html
   <body>
-    <!-- Note: the handlebars template script 
+    <!-- Note: the handlebars template script
          also results in a rendered Ember.View
          which is the outer <div> here -->
 
@@ -195,7 +200,7 @@ EmberHandlebars.ViewHelper = Ember.Object.create({
 
   aView.appendTo('body');
   ```
-    
+
   Will result in HTML structure:
 
   ``` html
@@ -285,7 +290,7 @@ EmberHandlebars.ViewHelper = Ember.Object.create({
 
   ``` html
   <div id="ember1" class="ember-view">
-    <div id="ember2" class="ember-view a-custom-view-class-as-property"> 
+    <div id="ember2" class="ember-view a-custom-view-class-as-property">
       hi
     </div>
   </div>

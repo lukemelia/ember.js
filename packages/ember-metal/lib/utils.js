@@ -96,12 +96,12 @@ Ember.guidFor = function guidFor(obj) {
   switch(type) {
     case 'number':
       ret = numberCache[obj];
-      if (!ret) ret = numberCache[obj] = 'nu'+obj;
+      if (!ret) ret = numberCache[obj] = 'n'+obj;
       return ret;
 
     case 'string':
       ret = stringCache[obj];
-      if (!ret) ret = stringCache[obj] = 'st'+(uuid++);
+      if (!ret) ret = stringCache[obj] = 's'+(uuid++);
       return ret;
 
     case 'boolean':
@@ -111,7 +111,7 @@ Ember.guidFor = function guidFor(obj) {
       if (obj[GUID_KEY]) return obj[GUID_KEY];
       if (obj === Object) return '(Object)';
       if (obj === Array)  return '(Array)';
-      ret = 'ember'+(uuid++);
+      ret = 'o'+(uuid++);
       GUID_DESC.value = ret;
       o_defineProperty(obj, GUID_KEY, GUID_DESC);
       return ret;

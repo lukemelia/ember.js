@@ -5,6 +5,7 @@
 
 var get = Ember.get, set = Ember.set;
 var indexOf = Ember.ArrayPolyfills.indexOf;
+var forEach = Ember.ArrayPolyfills.forEach;
 
 var ClassSet = function() {
   this.seen = {};
@@ -355,8 +356,14 @@ Ember._RenderBuffer.prototype =
     @method string
     @return {String} The generated HTMl
   */
-  string: function() {
-    var content = '', tag = this.elementTag, openTag;
+  string: function(stringBuffer) {
+    var isRoot = false;
+    if (!stringBuffer) {
+      isRoot = true;
+      stringBuffer = [];
+    }
+
+    var tag = this.elementTag, openTag;
 
     if (tag) {
       var id = this.elementId,
@@ -365,10 +372,10 @@ Ember._RenderBuffer.prototype =
           style = this.elementStyle,
           styleBuffer = '', prop;
 
-      openTag = ["<" + tag];
+      stringBuffer.push("<" + tag + " ");
 
-      if (id) { openTag.push('id="' + this._escapeAttribute(id) + '"'); }
-      if (classes) { openTag.push('class="' + this._escapeAttribute(classes.toDOM()) + '"'); }
+      if (id) { stringBuffer.push('id="' + this._escapeAttribute(id) + '" '); }
+      if (classes) { stringBuffer.push('class="' + this._escapeAttribute(classes.toDOM()) + '" '); }
 
       if (style) {
         for (prop in style) {
@@ -377,31 +384,35 @@ Ember._RenderBuffer.prototype =
           }
         }
 
-        openTag.push('style="' + styleBuffer + '"');
+        stringBuffer.push('style="' + styleBuffer + '" ');
       }
 
       if (attrs) {
         for (prop in attrs) {
           if (attrs.hasOwnProperty(prop)) {
-            openTag.push(prop + '="' + this._escapeAttribute(attrs[prop]) + '"');
+            stringBuffer.push(prop + '="' + this._escapeAttribute(attrs[prop]) + '" ');
           }
         }
       }
 
-      openTag = openTag.join(" ") + '>';
+      stringBuffer.push('>');
     }
 
     var childBuffers = this.childBuffers;
-
-    Ember.ArrayPolyfills.forEach.call(childBuffers, function(buffer) {
+    forEach.call(childBuffers, function(buffer) {
       var stringy = typeof buffer === 'string';
-      content += (stringy ? buffer : buffer.string());
+      if (stringy) {
+        stringBuffer.push(buffer);
+      } else {
+        buffer.string(stringBuffer);
+      }
     });
 
     if (tag) {
-      return openTag + content + "</" + tag + ">";
-    } else {
-      return content;
+      stringBuffer.push("</" + tag + ">");
+    }
+    if (isRoot) {
+      return stringBuffer.join('');
     }
   },
 
