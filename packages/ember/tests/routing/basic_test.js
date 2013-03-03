@@ -854,7 +854,7 @@ asyncTest("Nested callbacks are not exited when moving to siblings", function() 
 
       deepEqual(router.location.path, '/specials/1');
       equal(currentPath, 'root.special');
-      
+
       start();
     });
   });
@@ -907,6 +907,140 @@ asyncTest("Events are triggered on the controller if a matching action name is i
   action.handler(event);
 });
 
+asyncTest("Events can be registered inline on the Route", function() {
+  Router.map(function() {
+    this.route("home", { path: "/" });
+  });
+
+  var model = { name: "Tom Dale" };
+
+  App.HomeRoute = Ember.Route.extend({
+    model: function() {
+      return model;
+    },
+
+    showStuff: Ember.Route.event(function(obj) {
+      ok(this instanceof App.HomeRoute, "the handler is an App.HomeRoute");
+      // Using Ember.copy removes any private Ember vars which older IE would be confused by
+      deepEqual(Ember.copy(obj, true), { name: "Tom Dale" }, "the context is correct");
+      start();
+    })
+  });
+
+  Ember.TEMPLATES.home = Ember.Handlebars.compile(
+    "<a {{action showStuff content}}>{{name}}</a>"
+  );
+
+  bootApplication();
+
+  container.register('controller', 'home', Ember.Controller.extend());
+
+  Ember.run(function() {
+    router.handleURL("/");
+  });
+
+  var actionId = Ember.$("#qunit-fixture a").data("ember-action");
+  var action = Ember.Handlebars.ActionHelper.registeredActions[actionId];
+  var event = new Ember.$.Event("click");
+  action.handler(event);
+});
+
+asyncTest("Inline Route events can be inherited and have _super called", function() {
+  Router.map(function() {
+    this.route("home", { path: "/" });
+  });
+
+  var model = { name: "Tom Dale" },
+      showStuffSuperWasCalled = false,
+      hideStuffSuperWasCalled = false;
+
+  App.BaseRoute = Ember.Route.extend({
+    showStuff: Ember.Route.event(function(obj) {
+      showStuffSuperWasCalled = true;
+    }),
+    events: {
+      hideStuff: function(){
+        hideStuffSuperWasCalled = true;
+      }
+    }
+  });
+
+  App.HomeRoute = App.BaseRoute.extend({
+    model: function() {
+      return model;
+    },
+
+    showStuff: Ember.Route.event(function(obj) {
+      this._super(obj);
+      ok(showStuffSuperWasCalled, "inline event super was called");
+      start();
+    }),
+    hideStuff: Ember.Route.event(function(obj) {
+      this._super(obj);
+      ok(hideStuffSuperWasCalled, "events object super was called");
+      start();
+    }),
+  });
+
+  var template = "<a {{action showStuff content}}>{{name}}</a> ";
+  template = template + "<button {{action hideStuff content}}>{{name}}</button>";
+  Ember.TEMPLATES.home = Ember.Handlebars.compile(template);
+
+  bootApplication();
+
+  container.register('controller', 'home', Ember.Controller.extend());
+
+  Ember.run(function() {
+    router.handleURL("/");
+  });
+
+  var actionId = Ember.$("#qunit-fixture a").data("ember-action");
+  var action = Ember.Handlebars.ActionHelper.registeredActions[actionId];
+  action.handler(new Ember.$.Event("click"));
+  stop();
+
+  var actionId = Ember.$("#qunit-fixture button").data("ember-action");
+  var action = Ember.Handlebars.ActionHelper.registeredActions[actionId];
+  action.handler(new Ember.$.Event("click"));
+});
+
+asyncTest("Inline Route events can be called as normal methods", function() {
+  Router.map(function() {
+    this.route("home", { path: "/" });
+  });
+
+  var model = { name: "Tom Dale" },
+      methodWasCalled = false;
+
+  App.HomeRoute = Ember.Route.extend({
+    model: function() {
+      return model;
+    },
+    setupController: function(controller, model) {
+      this._super(controller, model);
+      this.showStuff();
+      ok(methodWasCalled, "method was called");
+      start();
+    },
+
+    showStuff: Ember.Route.event(function(obj) {
+      methodWasCalled = true;
+    })
+  });
+
+  Ember.TEMPLATES.home = Ember.Handlebars.compile(
+    "{{name}}"
+  );
+
+  bootApplication();
+
+  container.register('controller', 'home', Ember.Controller.extend());
+
+  Ember.run(function() {
+    router.handleURL("/");
+  });
+});
+
 asyncTest("Events are triggered on the current state", function() {
   Router.map(function() {
     this.route("home", { path: "/" });
@@ -936,9 +1070,6 @@ asyncTest("Events are triggered on the current state", function() {
   bootApplication();
 
   container.register('controller:home', Ember.Controller.extend());
-
-  //var controller = router._container.controller.home = Ember.Controller.create();
-  //controller.target = router;
 
   Ember.run(function() {
     router.handleURL("/");
@@ -1939,7 +2070,7 @@ test("The template is not re-rendered when two routes present the exact same tem
   App.SecondRoute = App.SharedRoute.extend();
   App.ThirdRoute = App.SharedRoute.extend();
   App.FourthRoute = App.SharedRoute.extend();
-  
+
   App.SharedController = Ember.Controller.extend();
 
   var insertionCount = 0;
@@ -1982,7 +2113,7 @@ test("The template is not re-rendered when two routes present the exact same tem
 
   equal(Ember.$('p', '#qunit-fixture').text(), "This is the third message");
   equal(insertionCount, 1, "view should still have inserted only once");
-  
+
   // Lastly transition to a different view, with the same controller and template
   Ember.run(function() {
     router.handleURL("/fourth");
@@ -1990,7 +2121,7 @@ test("The template is not re-rendered when two routes present the exact same tem
 
   equal(Ember.$('p', '#qunit-fixture').text(), "This is the fourth message");
   equal(insertionCount, 2, "view should have inserted a second time");
-  
+
 });
 
 test("ApplicationRoute with model does not proxy the currentPath", function() {
@@ -2070,7 +2201,7 @@ test("Route should tear down multiple outlets", function() {
     tagName: 'p',
     classNames: ['posts-index']
   });
-  
+
   App.PostsFooterView = Ember.View.extend({
     tagName: 'div',
     templateName: 'posts/footer',
@@ -2083,9 +2214,9 @@ test("Route should tear down multiple outlets", function() {
         into: 'application',
         outlet: 'menu'
       });
-      
+
       this.render();
-      
+
       this.render('postsFooter', {
         into: 'application',
         outlet: 'footer'
@@ -2106,11 +2237,11 @@ test("Route should tear down multiple outlets", function() {
   Ember.run(function() {
     router.handleURL("/users");
   });
-  
+
   equal(Ember.$('div.posts-menu:contains(postsMenu)', '#qunit-fixture').length, 0, "The posts/menu template was removed");
-  equal(Ember.$('p.posts-index:contains(postsIndex)', '#qunit-fixture').length, 0, "The posts/index template was removed"); 
+  equal(Ember.$('p.posts-index:contains(postsIndex)', '#qunit-fixture').length, 0, "The posts/index template was removed");
   equal(Ember.$('div.posts-footer:contains(postsFooter)', '#qunit-fixture').length, 0, "The posts/footer template was removed");
-   
+
 });
 
 
