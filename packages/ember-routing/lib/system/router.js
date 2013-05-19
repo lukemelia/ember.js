@@ -178,6 +178,10 @@ function getHandlerFunction(router) {
 
       container.register(routeName, DefaultRoute.extend());
       handler = container.lookup(routeName);
+
+      if (get(router, 'namespace.LOG_ACTIVE_GENERATION')) {
+        Ember.Logger.info("generated -> " + routeName, { fullName: routeName });
+      }
     }
 
     if (name === 'application') {
