@@ -303,6 +303,9 @@ function transitionCompleted(router) {
 Ember.Router.reopenClass({
   map: function(callback) {
     var router = this.router = new Router();
+    if (get(this, 'namespace').LOG_TRANSITIONS_INTERNAL) {
+      router.log = Ember.Logger.debug;
+    }
 
     var dsl = Ember.RouterDSL.map(function() {
       this.resource('application', { path: "/" }, function() {
