@@ -1,7 +1,7 @@
 
 var set = Ember.set, get = Ember.get;
 
-var originalLookup = Ember.lookup, lookup, TemplateTests, view, container;
+var originalLookup = Ember.lookup, lookup, TemplateTests, view, container, App;
 
 module("Support for {{yield}} helper (#307)", {
   setup: function() {
@@ -14,10 +14,14 @@ module("Support for {{yield}} helper (#307)", {
   },
   teardown: function() {
     Ember.run(function() {
+      Ember.TEMPLATES = {};
       if (view) {
         view.destroy();
-      }}
-    );
+      }
+      if (App) {
+        Ember.run(App, 'destroy');
+      }
+    });
 
     Ember.lookup = originalLookup;
   }
@@ -306,4 +310,20 @@ test("yield should work for views even if _parentView is null", function() {
 
   equal(view.$().text(), "Layout: View Content");
 
+});
+
+test("yield with nested components (#3220)", function(){
+  Ember.TEMPLATES['components/outer-component'] = Ember.Handlebars.compile("{{#inner-component}}<span>{{yield}}</span>{{/inner-component}}");
+  Ember.TEMPLATES['components/inner-component'] = Ember.Handlebars.compile("<div>{{yield}}<div>");
+  view = Ember.View.create({
+    template: Ember.Handlebars.compile(
+      "{{#outer-component}} Hello world {{/outer-component}}"
+    )
+  });
+  App = Ember.run(Ember.Application, 'create');
+
+  Ember.run(function() {
+    view.appendTo('#qunit-fixture');
+  });
+  equal(view.$().html(), "<div><span> Hello world </span></div>");
 });
