@@ -139,7 +139,7 @@ function simpleBind(property, options) {
 /**
   @private
 
-  '_triageMustache' is used internally select between a binding and helper for
+  '_triageMustache' is used internally select between a binding, helper, or component for
   the given context. Until this point, it would be hard to determine if the
   mustache is a property reference or a regular helper reference. This triage
   helper resolves that.
@@ -154,12 +154,46 @@ function simpleBind(property, options) {
 */
 EmberHandlebars.registerHelper('_triageMustache', function(property, fn) {
   Ember.assert("You cannot pass more than one argument to the _triageMustache helper", arguments.length <= 2);
+
   if (helpers[property]) {
     return helpers[property].call(this, fn);
   }
-  else {
-    return helpers.bind.apply(this, arguments);
+
+  if (Ember.FEATURES.isEnabled('container-renderables')) {
+    if (property.indexOf('-') !== -1) {
+      var options = arguments[arguments.length - 1],
+          container = options.data.view.container,
+          helper = container && property && container.lookup('helper:' + property);
+
+      if (helper) {
+        return helper.call(this, fn);
+      }
+
+      var fullName = 'component:' + property,
+          templateFullName = 'template:components/' + property,
+          templateRegistered = container && container.has(templateFullName);
+
+      if (templateRegistered) {
+        container.injection(fullName, 'layout', templateFullName);
+      }
+
+      var Component = container.lookupFactory(fullName);
+
+      // Only treat as a component if either the component
+      // or a template has been registered.
+      if (templateRegistered || Component) {
+        if (!Component) {
+          container.register(fullName, Ember.Component);
+          Component = container.lookupFactory(fullName);
+        }
+
+        Ember.Handlebars.helper(property, Component);
+        return helpers[property].call(this, fn);
+      }
+    }
   }
+
+  return helpers.bind.apply(this, arguments);
 });
 
 /**
