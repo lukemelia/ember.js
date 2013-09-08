@@ -456,3 +456,18 @@ test("The container can get options that should be applied to all factories for 
 
   ok(postView1 !== postView2, "The two lookups are different");
 });
+
+test("An injected non-singleton instance is never cached", function() {
+  var container = new Container();
+  var PostView = factory();
+  var PostViewHelper = factory();
+
+  container.register('view:post', PostView, { singleton: false });
+  container.register('view_helper:post', PostViewHelper, { singleton: false });
+  container.injection('view:post', 'viewHelper', 'view_helper:post');
+
+  var postView1 = container.lookup('view:post');
+  var postView2 = container.lookup('view:post');
+
+  ok(postView1.viewHelper !== postView2.viewHelper, "Injected non-singletons are not cached");
+});
