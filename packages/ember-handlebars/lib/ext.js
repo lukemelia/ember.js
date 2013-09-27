@@ -133,13 +133,11 @@ Ember.Handlebars.registerHelper('helperMissing', function(path) {
   var options = arguments[arguments.length - 1];
 
   if (Ember.FEATURES.isEnabled('container-renderables')) {
-    if (path.indexOf('-') !== -1) {
-      var container = options.data.view.container,
-          helper = container && container.lookup('helper:' + path);
 
-      if (helper) {
-        return helper.apply(this, slice.call(arguments, 1));
-      }
+    var helper = Ember.Handlebars.resolveHelper(options.data.view.container, path);
+
+    if (helper) {
+      return helper.apply(this, slice.call(arguments, 1));
     }
   }
 
@@ -148,6 +146,40 @@ Ember.Handlebars.registerHelper('helperMissing', function(path) {
     view = options.data.view;
   }
   throw new Ember.Error(Ember.String.fmt(error, [view, path, this]));
+});
+
+var handlebarsBlockHelperMissing = Ember.Handlebars.blockHelperMissing;
+
+/**
+  @private
+
+  Registers a helper in Handlebars that will be called if no property with the
+  given name can be found on the current context object, and no helper with
+  that name is registered.
+
+  This throws an exception with a more helpful error message so the user can
+  track down where the problem is happening.
+
+  @method helperMissing
+  @for Ember.Handlebars.helpers
+  @param {String} path
+  @param {Hash} options
+*/
+Ember.Handlebars.registerHelper('blockHelperMissing', function(path) {
+
+  var options = arguments[arguments.length - 1];
+
+  if (Ember.FEATURES.isEnabled('container-renderables')) {
+
+    var helper = Ember.Handlebars.resolveHelper(options.data.view.container, path);
+
+    if (helper) {
+      return helper.apply(this, slice.call(arguments, 1));
+    }
+  }
+
+  // Defer to raw Handlebars blockHelperMissing
+  return handlebarsBlockHelperMissing.apply(this, arguments);
 });
 
 /**

@@ -149,52 +149,61 @@ function simpleBind(property, options) {
   @method _triageMustache
   @for Ember.Handlebars.helpers
   @param {String} property Property/helperID to triage
-  @param {Function} fn Context to provide for rendering
+  @param {Object} options hash of template/rendering options
   @return {String} HTML string
 */
-EmberHandlebars.registerHelper('_triageMustache', function(property, fn) {
+EmberHandlebars.registerHelper('_triageMustache', function(property, options) {
   Ember.assert("You cannot pass more than one argument to the _triageMustache helper", arguments.length <= 2);
 
   if (helpers[property]) {
-    return helpers[property].call(this, fn);
+    return helpers[property].call(this, options);
   }
 
   if (Ember.FEATURES.isEnabled('container-renderables')) {
-    if (property.indexOf('-') !== -1) {
-      var options = arguments[arguments.length - 1],
-          container = options.data.view.container,
-          helper = container && property && container.lookup('helper:' + property);
 
-      if (helper) {
-        return helper.call(this, fn);
-      }
-
-      var fullName = 'component:' + property,
-          templateFullName = 'template:components/' + property,
-          templateRegistered = container && container.has(templateFullName);
-
-      if (templateRegistered) {
-        container.injection(fullName, 'layout', templateFullName);
-      }
-
-      var Component = container.lookupFactory(fullName);
-
-      // Only treat as a component if either the component
-      // or a template has been registered.
-      if (templateRegistered || Component) {
-        if (!Component) {
-          container.register(fullName, Ember.Component);
-          Component = container.lookupFactory(fullName);
-        }
-
-        Ember.Handlebars.helper(property, Component);
-        return helpers[property].call(this, fn);
-      }
+    var helper = Ember.Handlebars.resolveHelper(options.data.view.container, property);
+    if (helper) {
+      return helper.call(this, options);
     }
   }
 
-  return helpers.bind.apply(this, arguments);
+  return helpers.bind.call(this, property, options);
 });
+
+Ember.Handlebars.resolveHelper = function(container, name) {
+
+  // name will be an empty string for {{this}} keyword
+  if (!container || name === "" || name.indexOf('-') === -1) {
+    return;
+  }
+
+  return container.lookup('helper:' + name) || resolveComponent(container, name);
+};
+
+function resolveComponent(container, name) {
+  var fullName = 'component:' + name,
+      templateFullName = 'template:components/' + name,
+      templateRegistered = container && container.has(templateFullName);
+
+  if (templateRegistered) {
+    container.injection(fullName, 'layout', templateFullName);
+  }
+
+  var Component = container.lookupFactory(fullName);
+
+  // Only treat as a component if either the component
+  // or a template has been registered.
+  if (templateRegistered || Component) {
+    if (!Component) {
+      container.register(fullName, Ember.Component);
+      Component = container.lookupFactory(fullName);
+    }
+
+    var helper = EmberHandlebars.makeViewHelper(Component);
+    container.register('helper:' + name, helper);
+    return helper;
+  }
+}
 
 /**
   @private

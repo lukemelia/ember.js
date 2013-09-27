@@ -54,6 +54,7 @@ if (Ember.FEATURES.isEnabled('container-renderables')) {
     });
 
     equal(Ember.$('#wrapper').text(), "BORF YES", "The helper was invoked from the container");
+    ok(!Ember.Handlebars.helpers['x-borf'], "Container-registered helper doesn't wind up on global helpers hash");
   });
 
   test("Bound helpers registered on the container can be late-invoked", function() {
@@ -68,6 +69,7 @@ if (Ember.FEATURES.isEnabled('container-renderables')) {
     });
 
     equal(Ember.$('#wrapper').text(), "-- xela", "The bound helper was invoked from the container");
+    ok(!Ember.Handlebars.helpers['x-reverse'], "Container-registered helper doesn't wind up on global helpers hash");
   });
 
   test("Undashed helpers registered on the container can not (presently) be invoked", function() {
