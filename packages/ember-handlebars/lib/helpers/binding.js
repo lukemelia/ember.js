@@ -177,33 +177,16 @@ Ember.Handlebars.resolveHelper = function(container, name) {
     return;
   }
 
-  return container.lookup('helper:' + name) || resolveComponent(container, name);
-};
-
-function resolveComponent(container, name) {
-  var fullName = 'component:' + name,
-      templateFullName = 'template:components/' + name,
-      templateRegistered = container && container.has(templateFullName);
-
-  if (templateRegistered) {
-    container.injection(fullName, 'layout', templateFullName);
-  }
-
-  var Component = container.lookupFactory(fullName);
-
-  // Only treat as a component if either the component
-  // or a template has been registered.
-  if (templateRegistered || Component) {
-    if (!Component) {
-      container.register(fullName, Ember.Component);
-      Component = container.lookupFactory(fullName);
+  var helper = container.lookup('helper:' + name);
+  if (!helper) {
+    var Component = container.lookup('component-lookup:main').lookupFactory(name);
+    if (Component) {
+      helper = EmberHandlebars.makeViewHelper(Component);
+      container.register('helper:' + name, helper);
     }
-
-    var helper = EmberHandlebars.makeViewHelper(Component);
-    container.register('helper:' + name, helper);
-    return helper;
   }
-}
+  return helper;
+};
 
 /**
   @private
