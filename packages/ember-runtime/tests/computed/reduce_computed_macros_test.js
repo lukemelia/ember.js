@@ -943,6 +943,60 @@ test("property paths in sort properties update the sorted array", function () {
   deepEqual(get(obj, 'sortedPeople'), [cersei, jaime, sansa], "array is sorted correctly");
 });
 
+test("computed.sort property's length should notify of changes correctly", function() {
+  var observedLengthChanges = Ember.A(),
+      jaime, cersei;
+
+  jaime = Ember.Object.createWithMixins({
+    data: { status: 2 },
+    name: 'Jaime',
+    status: Ember.computed("data", function(){
+      return get(this, "data.status");
+    })
+  });
+  cersei = Ember.Object.createWithMixins({
+    name: 'Cersei',
+    data: { status: 1 },
+    status: Ember.computed("data", function(){
+      return get(this, "data.status");
+    })
+  });
+  Ember.run(function() {
+    obj = Ember.Object.createWithMixins({
+      people: Ember.A([]),
+      sortProps: Ember.A(['status']),
+      sortedPeople: Ember.computed.sort('people', 'sortProps'),
+      sortedPeopleLengthDidChange: Ember.observer('sortedPeople.length', function(){
+        observedLengthChanges.push(this.get('sortedPeople.length'));
+      })
+    });
+  });
+
+  observedLengthChanges.clear();
+  Ember.run(function() {
+    obj.get('people').pushObject(cersei);
+  });
+  deepEqual(get(obj, 'sortedPeople'), [cersei], "array is sorted correctly after adding one object");
+  equal(observedLengthChanges.length, 1, "length of sortedPeople should change once but observed to change as follows: " + JSON.stringify(observedLengthChanges));
+
+  observedLengthChanges.clear();
+  Ember.run(function() {
+    obj.get('people').pushObject(jaime);
+  });
+  deepEqual(get(obj, 'sortedPeople'), [cersei, jaime], "array is sorted correctly after adding second object");
+  equal(observedLengthChanges.length, 1, "length of sortedPeople should change once but observed to change as follows: " + JSON.stringify(observedLengthChanges));
+
+  observedLengthChanges.clear();
+  Ember.run(function() {
+    cersei.data.status = 2;
+    cersei.notifyPropertyChange('data');
+    jaime.data.status = 1;
+    jaime.notifyPropertyChange('data');
+  });
+  deepEqual(get(obj, 'sortedPeople'), [jaime, cersei], "array is sorted correctly after causing sortOrder change");
+  equal(observedLengthChanges.length, 0, "length of sortedPeople should not change but was observed to change as follows: " + JSON.stringify(observedLengthChanges));
+});
+
 function sortByLnameFname(a, b) {
   var lna = get(a, 'lname'),
       lnb = get(b, 'lname');
